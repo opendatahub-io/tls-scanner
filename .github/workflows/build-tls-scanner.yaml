@@ -31,7 +31,7 @@ on:
 
 concurrency:
   group: build-tls-scanner-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 env:
   TLS_SCANNER_REPO: openshift/tls-scanner
   REGISTRY: quay.io
