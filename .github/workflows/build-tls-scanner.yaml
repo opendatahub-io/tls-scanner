@@ -3,17 +3,15 @@ name: Build tls-scanner image
 # https://github.com/openshift/tls-scanner using its Dockerfile.local
 # (public base images only, no CI registry credentials needed).
 #
-# Uploads to Quay:
+# Uploads to GitHub Container Registry (ghcr.io):
 #   - on push to main
 #   - on workflow_dispatch with the "push" checkbox checked
 # Tags pushed: :latest (main only) and :<short-sha> of the built tls-scanner
 # commit. PRs and unchecked dispatches build only (validation).
 #
-# Required secrets (same as other workflows pushing to quay.io/rhoai):
-#   RHOAI_QUAY_BOT_USERNAME / RHOAI_QUAY_BOT_PASSWORD
-# The destination repo (default quay.io/rhoai/tls-scanner) must exist and the
-# robot must have write access to it. Override the destination per repository
-# with the TLS_SCANNER_REPOSITORY variable.
+# Authentication uses the built-in GITHUB_TOKEN (via `packages: write` permission).
+# Default destination is ghcr.io/<owner>/<repo>. Override via the
+# TLS_SCANNER_REPOSITORY repository variable if needed (e.g. "my-org/tls-scanner").
 on:
   push:
     branches: [main]
@@ -32,10 +30,12 @@ on:
 concurrency:
   group: build-tls-scanner-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   TLS_SCANNER_REPO: openshift/tls-scanner
-  REGISTRY: quay.io
-  REPOSITORY: ${{ vars.TLS_SCANNER_REPOSITORY || 'rhoai/tls-scanner' }}
+  REGISTRY: ghcr.io
+  REPOSITORY: ${{ vars.TLS_SCANNER_REPOSITORY || github.repository }}
+
 jobs:
   build:
     name: Build (and push) tls-scanner image
@@ -43,6 +43,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      packages: write
     steps:
 
       - name: Check out tls-scanner sources
@@ -64,7 +65,9 @@ jobs:
             echo "Invalid tls-scanner ref: '$REF'" >&2
             exit 1
           fi
-          image="${REGISTRY}/${REPOSITORY}"
+          # GHCR requires lowercase repository paths
+          repo_lower="$(echo "${REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
+          image="${REGISTRY}/${repo_lower}"
           short_sha="$(git rev-parse --short=12 HEAD)"
           tags="${image}:${short_sha}"
           # :latest must only follow the default branch of tls-scanner
@@ -94,13 +97,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069  # v4.4.1
 
-      - name: Log in to Quay
+      - name: Log in to GitHub Container Registry
         if: steps.meta.outputs.push == 'true'
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.RHOAI_QUAY_BOT_USERNAME }}
-          password: ${{ secrets.RHOAI_QUAY_BOT_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build image
         id: build
