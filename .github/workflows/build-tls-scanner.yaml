@@ -53,6 +53,13 @@ jobs:
           ref: ${{ inputs.ref || 'main' }}
           persist-credentials: false
 
+      - name: Edit sources
+        run: |
+          set -Eeuox pipefail
+          
+          # default TARGETARCH breaks automatic assignment in multi-arch builds
+          sed 's/^ARG TARGETARCH=.*/ARG TARGETARCH/' Dockerfile.local > Dockerfile.local.edited
+
       - name: Calculate image tags and push decision
         id: meta
         env:
@@ -110,14 +117,14 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
         with:
           context: .
-          file: Dockerfile.local
+          file: Dockerfile.local.edited
           platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x
           push: ${{ steps.meta.outputs.push == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
           # Skip cache export unless we push (fork PRs cannot write the branch cache)
           cache-to: ${{ steps.meta.outputs.push == 'true' && 'type=gha,mode=max' || '' }}
-          # Keep a plain single-arch manifest, no attestation entries
+          # Disables SLSA provenance attestations
           provenance: false
 
       - name: Write job summary
