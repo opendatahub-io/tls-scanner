@@ -33,3 +33,19 @@ def test_config_unset_optional_field():
 
     config = Config.from_env()
     assert config.optional is None
+
+def test_inherited_optional_field_without_default():
+    @dataclass(frozen=True)
+    class BaseConfig(tls_scanner.EnvConfig.EnvConfig):
+        base_opt: str | None
+
+
+    @dataclass(frozen=True)
+    class ChildConfig(BaseConfig):
+        child_req: str
+
+    env = {"CHILD_REQ": "configured"}
+    cfg = ChildConfig.from_env(env=env)
+
+    assert cfg.child_req == "configured"
+    assert cfg.base_opt is None

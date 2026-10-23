@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import annotationlib
+import typing
 from dataclasses import MISSING, dataclass, fields
 import os
 import types
@@ -12,7 +12,8 @@ class EnvConfig:
 
     @classmethod
     def from_env(cls, env: dict[str, str | None] = os.environ) -> Self:
-        annotations = annotationlib.get_annotations(cls, eval_str=True)
+        # hints need to be evaluated for the inheritance hierarchy, and string annotation have to be eval'd
+        annotations = typing.get_type_hints(cls)
         kwargs: dict[str, str | None] = {}
 
         for f in fields(cls):
