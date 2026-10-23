@@ -23,7 +23,7 @@ def test_config_computed_field():
     class Config(tls_scanner.EnvConfig.EnvConfig):
         computed: str = field(init=False, default="ready")
 
-    config = Config.from_env()
+    config = Config.from_env(env={})
     assert config.computed == "ready"
 
 def test_config_unset_optional_field():
@@ -31,7 +31,7 @@ def test_config_unset_optional_field():
     class Config(tls_scanner.EnvConfig.EnvConfig):
         optional: str | None
 
-    config = Config.from_env()
+    config = Config.from_env(env={})
     assert config.optional is None
 
 def test_inherited_optional_field_without_default():
