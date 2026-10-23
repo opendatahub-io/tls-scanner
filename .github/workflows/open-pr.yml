@@ -1,0 +1,47 @@
+name: Open Pull Request
+
+on:
+  workflow_dispatch:
+    inputs:
+      head_branch:
+        description: "Source branch to create the PR from"
+        required: true
+        type: string
+      base_branch:
+        description: "Target branch to merge into"
+        required: true
+        default: "main"
+        type: string
+      pr_title:
+        description: "PR Title"
+        required: false
+        default: "Automated PR from branch"
+        type: string
+      pr_body:
+        description: "PR Description"
+        required: false
+        default: "Automated pull request triggered via workflow dispatch."
+        type: string
+
+jobs:
+  open-pr:
+    runs-on: ubuntu-26.04
+    permissions:
+      pull-requests: write
+    steps:
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD: ${{ inputs.head_branch }}
+          BASE: ${{ inputs.base_branch }}
+          TITLE: ${{ inputs.pr_title }}
+          BODY: ${{ inputs.pr_body }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh pr create \
+            --repo "$REPO" \
+            --head "$HEAD" \
+            --base "$BASE" \
+            --title "$TITLE" \
+            --body "$BODY"
