@@ -11,8 +11,8 @@ class EnvConfig:
     """Base dataclass that auto-populates fields from environment variables."""
 
     @classmethod
-    def from_env(cls) -> Self:
-        annotations = annotationlib.get_annotations(cls)
+    def from_env(cls, env: dict[str, str | None] = os.environ) -> Self:
+        annotations = annotationlib.get_annotations(cls, eval_str=True)
         kwargs: dict[str, str | None] = {}
 
         for f in fields(cls):
@@ -20,7 +20,7 @@ class EnvConfig:
                 continue
 
             env_name = f.metadata.get("env", f.name.upper())
-            val = os.environ.get(env_name)
+            val = env.get(env_name)
 
             has_default = (f.default is not MISSING) or (f.default_factory is not MISSING)
             hint = annotations.get(f.name)

@@ -3,13 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import tls_scanner.EnvConfig
 
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    import pytest
-
-
-def test_config(monkeypatch: pytest.MonkeyPatch):
+def test_config():
 
     @dataclass(slots=True, frozen=True, kw_only=True)
     class Config(tls_scanner.EnvConfig.EnvConfig):
@@ -17,11 +12,7 @@ def test_config(monkeypatch: pytest.MonkeyPatch):
         b: str = ""
         c: str | None = None
 
-    monkeypatch.setenv("A", "a")
-    monkeypatch.setenv("B", "b")
-    monkeypatch.setenv("C", "c")
-
-    config = Config.from_env()
+    config = Config.from_env(env={"A": "a", "B": "b", "C": "c"})
 
     assert config.a == "a"
     assert config.b == "b"
@@ -34,3 +25,11 @@ def test_config_computed_field():
 
     config = Config.from_env()
     assert config.computed == "ready"
+
+def test_config_unset_optional_field():
+    @dataclass(slots=True, frozen=True, kw_only=True)
+    class Config(tls_scanner.EnvConfig.EnvConfig):
+        optional: str | None
+
+    config = Config.from_env()
+    assert config.optional is None
