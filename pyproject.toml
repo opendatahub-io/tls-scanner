@@ -1,0 +1,22 @@
+[project]
+name = "tls-scanner"
+version = "0.1.0"
+description = "GitHub Actions build automation for the openshift/tls-scanner image"
+readme = "README.md"
+authors = [
+    { name="RHODS QE", email = "<ods-qe@redhat.com>" }
+]
+requires-python = ">=3.15"
+dependencies = []
+
+[project.scripts]
+gha-compute-build-params = "tls_scanner.gha_compute_build_params:main"
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
