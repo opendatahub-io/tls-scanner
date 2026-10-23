@@ -188,7 +188,11 @@ def main() -> None:
         )
         if res.returncode != 1:
             fail(f"Expected --pqc-check exit code 1, got {res.returncode}")
-        print("PASS: [5/5] --pqc-check failed as expected with exit code 1")
+        if "PQC COMPLIANCE CHECK: FAILED" not in (res.stdout or ""):
+            fail(f"--pqc-check exited 1 without reporting a PQC failure; stdout: {(res.stdout or '').strip()[-2000:]}")
+        if "PQC COMPLIANCE CHECK: PASSED" in (res.stdout or ""):
+            fail("--pqc-check reported both FAILED and PASSED")
+        print("PASS: [5/5] --pqc-check reported PQC failure as expected with exit code 1")
 
         print(f"\nPASS: all acceptance tests passed for {image_ref}")
     finally:
