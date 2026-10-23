@@ -23,6 +23,8 @@ on:
         default: "Automated pull request triggered via workflow dispatch."
         type: string
 
+permissions: {}
+
 jobs:
   open-pr:
     runs-on: ubuntu-26.04
