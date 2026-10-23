@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import tls_scanner.EnvConfig
 
 from typing import TYPE_CHECKING
@@ -26,3 +26,11 @@ def test_config(monkeypatch: pytest.MonkeyPatch):
     assert config.a == "a"
     assert config.b == "b"
     assert config.c == "c"
+
+def test_config_computed_field():
+    @dataclass(slots=True, frozen=True, kw_only=True)
+    class Config(tls_scanner.EnvConfig.EnvConfig):
+        computed: str = field(init=False, default="ready")
+
+    config = Config.from_env()
+    assert config.computed == "ready"

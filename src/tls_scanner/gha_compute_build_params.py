@@ -29,7 +29,11 @@ def main() -> None:
     if not re.fullmatch(r"[A-Za-z0-9._/-]+", cfg.ref):
         raise SystemExit(f"Invalid tls-scanner ref: '{cfg.ref}'")
 
-    image = f"{cfg.registry}/{cfg.repository}"
+    for name, value in (("registry", cfg.registry), ("repository", cfg.repository)):
+        if re.search(r"[\r\n]", value):
+            raise SystemExit(f"Invalid {name}: control characters are not allowed")
+
+    image = f"{cfg.registry}/{cfg.repository.lower()}"
 
     proc = subprocess.run(
         ["git", "rev-parse", "--short=12", "HEAD"],

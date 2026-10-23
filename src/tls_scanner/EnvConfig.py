@@ -16,6 +16,9 @@ class EnvConfig:
         kwargs: dict[str, str | None] = {}
 
         for f in fields(cls):
+            if not f.init:
+                continue
+
             env_name = f.metadata.get("env", f.name.upper())
             val = os.environ.get(env_name)
 
