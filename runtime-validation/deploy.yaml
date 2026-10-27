@@ -1,0 +1,42 @@
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tls-scanner-aipipelines
+  namespace: tls-scanner
+  labels:
+    app.kubernetes.io/part-of: tls-scanner
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: tls-scanner
+    spec:
+      serviceAccountName: default
+      restartPolicy: Never
+      containers:
+        - name: tls-scanner
+          image: ghcr.io/opendatahub-io/tls-scanner:df6f8d462cd2
+          imagePullPolicy: Always
+          command: ["/usr/local/bin/tls-scanner"]
+          args:
+            - --all-pods
+            - --namespace-filter
+            - redhat-ods-operator,redhat-ods-applications,redhat-ods-monitoring,rhoai-model-registries
+            - --pqc-check
+            - --json-file
+            - /results/results.json
+            - --csv-file
+            - /results/results.csv
+            - --junit-file
+            - /results/junit_tls_scan.xml
+            - --log-file
+            - /results/scan.log
+          volumeMounts:
+            - name: results
+              mountPath: /results
+      volumes:
+        - name: results
+          emptyDir: {}
