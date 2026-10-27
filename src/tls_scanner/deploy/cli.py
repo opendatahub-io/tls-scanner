@@ -25,6 +25,7 @@ import argparse
 import os
 import shutil
 import sys
+import time
 
 from .cluster import set_up, teardown
 from .job import PQC_FAILED, PQC_PASSED, collect, summarise, wait_for_finish, wait_for_pod
@@ -94,10 +95,14 @@ def main(argv: list[str] | None = None) -> int:
         policies_applied = set_up(args.namespace, args.cluster_role, target_namespaces)
         oc_apply(manifest, "Job")
 
+        # One deadline across the pod-appearance wait and the finish wait, so
+        # the combined wait cannot exceed --timeout (a stuck Pending pod or a
+        # slow scan must not stretch the build by a second full timeout).
+        deadline = time.time() + args.timeout
         pod = wait_for_pod(args.namespace, args.job_name, args.timeout)
         log(f"Scanner pod: {pod}")
 
-        scanner_rc, _ = wait_for_finish(args.namespace, pod, args.timeout)
+        scanner_rc, _ = wait_for_finish(args.namespace, pod, args.timeout, deadline=deadline)
         log(f"Scanner reported exit code {scanner_rc}")
 
         collect(args.namespace, pod, args.out_dir)
