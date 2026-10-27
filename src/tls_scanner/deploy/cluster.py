@@ -168,8 +168,16 @@ def teardown(namespace: str, cluster_role: str, policies_applied: int) -> None:
             f"WARNING: {policies_applied} NetworkPolicy(ies) were applied this run "
             "but none were found for cleanup"
         )
+    # The privileged SCC and the cluster roles were granted to this
+    # namespace's default SA through cluster-scoped objects
+    # (add-scc-to-user / add-cluster-role-to-user). Namespace deletion does
+    # not remove those grants, so a later namespace with the same name would
+    # otherwise inherit its default SA's stale grants. Revoke each before the
+    # namespace goes away.
+    oc("adm", "policy", "remove-scc-from-user", "privileged", "-z", "default", "-n", namespace, check=False)
+    oc("adm", "policy", "remove-cluster-role-from-user", "cluster-reader", "-z", "default", "-n", namespace, check=False)
+    oc("adm", "policy", "remove-cluster-role-from-user", cluster_role, "-z", "default", "-n", namespace, check=False)
     # The ClusterRole outlives the namespace, so remove it explicitly.
     oc("delete", "clusterrole", cluster_role, "--ignore-not-found=true", check=False)
-    # Deleting the namespace removes the Job, the pod, its emptyDir and both
-    # ClusterRoleBindings in a single step.
+    # Deleting the namespace removes the namespaced Job, pod and its emptyDir.
     oc("delete", "namespace", namespace, "--ignore-not-found=true", "--wait=false", check=False)
