@@ -8,7 +8,6 @@ authors = [
 ]
 requires-python = ">=3.15"
 dependencies = [
-    "pyyaml"
 ]
 
 [project.scripts]
@@ -23,4 +22,5 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "pyyaml>=6.0.3",
 ]
