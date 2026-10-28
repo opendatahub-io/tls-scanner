@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import shutil
 import sys
 import time
@@ -33,6 +34,26 @@ from .manifests import DEFAULT_NAMESPACES, NETWORK_POLICY_SELECTOR, render_job_m
 from .oc import log, oc, oc_apply
 
 EXIT_PASS, EXIT_FAIL, EXIT_CONFIG, EXIT_UNTRUSTED = 0, 1, 2, 3
+
+# --namespaces is interpolated into the privileged scanner pod's shell script
+# (see JOB_MANIFEST's --namespace-filter), so each entry is validated to a
+# Kubernetes-namespace-name shape. This rejects shell metacharacters before
+# they can reach sh -c, rather than relying on the surrounding single quotes.
+_NAMESPACE_NAME_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9.\-]*[A-Za-z0-9])?")
+
+
+def _invalid_namespace_entries(namespaces: str) -> list[str]:
+    """Return the --namespaces entries that are not Kubernetes namespace names.
+
+    Entries are split on commas and each non-empty, stripped entry is checked
+    against _NAMESPACE_NAME_RE; any that fail are returned (in order).
+    """
+    bad: list[str] = []
+    for raw in namespaces.split(","):
+        name = raw.strip()
+        if name and not _NAMESPACE_NAME_RE.fullmatch(name):
+            bad.append(name)
+    return bad
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -49,8 +70,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--namespaces", default=DEFAULT_NAMESPACES)
     parser.add_argument("--job-name", default="tls-scanner-job")
     parser.add_argument("--cluster-role", default="tls-scanner-cross-namespace")
-    parser.add_argument("--parallel", default="16")
-    parser.add_argument("--artifact-wait", default="120")
+    parser.add_argument("--parallel", type=int, default=16)
+    parser.add_argument("--artifact-wait", type=int, default=120)
     parser.add_argument("--timeout", type=int, default=7200)
     parser.add_argument("--out-dir", default="tls-scan-results")
     parser.add_argument(
@@ -71,6 +92,14 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(sys.argv[1:] if argv is None else argv)
+
+    bad_namespaces = _invalid_namespace_entries(args.namespaces)
+    if bad_namespaces:
+        log(
+            "ERROR: invalid --namespaces entries (must be Kubernetes namespace "
+            f"names): {', '.join(repr(entry) for entry in bad_namespaces)}"
+        )
+        return EXIT_CONFIG
 
     if not shutil.which("oc"):
         log("ERROR: oc is not on PATH")
