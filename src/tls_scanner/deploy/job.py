@@ -67,10 +67,16 @@ def wait_for_finish(
             ).stdout
             or ""
         ).strip()
-        # Succeeded without the marker means the shell exited 0 before printing
-        # the verdict (the container always ends with exit 0), so the scan
-        # produced no result; fail fast instead of polling to the deadline.
+        # A terminal phase with no marker means the shell exited 0 before
+        # printing the verdict (the container always ends with exit 0), so the
+        # scan produced no result. But the pod can finish between the log read
+        # above and this phase read (CWE-367), so re-read the log once and
+        # re-check the marker before failing; only raise if it is still missing.
         if phase in ("Failed", "Error", "Succeeded"):
+            final = oc("logs", pod, "-n", namespace, check=False).stdout or ""
+            match = FINISHED_RE.search(final)
+            if match:
+                return int(match.group(1)), final
             raise RuntimeError(f"pod {pod} ended without a completion marker (phase {phase})")
         # A pod stuck in Pending (image pull, SCC denial, an unschedulable
         # system-cluster-critical request, ...) never reaches Failed/Error.
