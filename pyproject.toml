@@ -14,7 +14,6 @@ dependencies = [
 [project.scripts]
 gha-compute-build-params = "tls_scanner.gha_compute_build_params:main"
 run-tls-scanner-selftest = "tls_scanner.run_tls_scanner_selftest:main"
-run-runtime-security-validation = "tls_scanner.runtime_validation.cli:main"
 tls-scanner-deploy = "tls_scanner.deploy.cli:main"
 
 [build-system]
