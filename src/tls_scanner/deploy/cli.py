@@ -68,6 +68,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--namespace", default="tls-scanner")
     parser.add_argument("--namespaces", default=DEFAULT_NAMESPACES)
+    parser.add_argument(
+        "--component-filter",
+        default="",
+        help="Comma-separated scanner component names (pod label app / app.kubernetes.io/name / container name)",
+    )
     parser.add_argument("--job-name", default="tls-scanner-job")
     parser.add_argument("--cluster-role", default="tls-scanner-cross-namespace")
     parser.add_argument("--parallel", type=int, default=16)
@@ -101,6 +106,14 @@ def main(argv: list[str] | None = None) -> int:
         )
         return EXIT_CONFIG
 
+    bad_components = _invalid_namespace_entries(args.component_filter) if args.component_filter else []
+    if bad_components:
+        log(
+            "ERROR: invalid --component-filter entries: "
+            f"{', '.join(repr(entry) for entry in bad_components)}"
+        )
+        return EXIT_CONFIG
+
     if not shutil.which("oc"):
         log("ERROR: oc is not on PATH")
         return EXIT_CONFIG
@@ -111,6 +124,7 @@ def main(argv: list[str] | None = None) -> int:
         image=args.image,
         parallel=args.parallel,
         namespaces=args.namespaces,
+        component_filter=args.component_filter,
         pqc_check=args.pqc_check,
         artifact_wait=args.artifact_wait,
     )

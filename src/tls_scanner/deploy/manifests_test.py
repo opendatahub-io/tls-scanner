@@ -36,6 +36,18 @@ def test_render_job_manifest_tracks_parallel_and_caps_cpu() -> None:
     assert "--pqc-check" in script
     assert "--timing-file timing.txt" in script
 
+    filtered = render_job_manifest(
+        job_name="tls-scanner-job",
+        namespace="tls-scanner",
+        image="ghcr.io/opendatahub-io/tls-scanner@sha256:abc",
+        parallel=8,
+        namespaces="opendatahub",
+        component_filter="maas-api,maas-controller",
+        pqc_check=True,
+        artifact_wait=60,
+    )
+    assert "--component-filter 'maas-api,maas-controller'" in yaml.safe_load(filtered)["spec"]["template"]["spec"]["containers"][0]["args"][0]
+
     capped = yaml.safe_load(
         render_job_manifest(
             job_name="tls-scanner-job",

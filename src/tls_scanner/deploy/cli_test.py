@@ -22,6 +22,7 @@ def test_default_arguments() -> None:
     assert args.timeout == 7200
     assert args.pqc_check is False
     assert args.keep is False
+    assert args.component_filter == ""
 
 
 def test_namespace_name_validation() -> None:

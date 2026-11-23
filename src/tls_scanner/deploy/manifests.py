@@ -57,6 +57,7 @@ spec:
               --timing-file timing.txt \\
               --log-file /artifacts/scan.log \\
               --namespace-filter '{namespaces}' \\
+              {component_filter_flag} \\
               {pqc_flag} >> /artifacts/stdout.log 2>&1 &
             SCANNER_PID=$!
             tail -f --retry /artifacts/scan.log /artifacts/stdout.log &
@@ -155,6 +156,7 @@ def render_job_manifest(
     cpu_limit: str | None = None,
     mem_request: str = "4Gi",
     mem_limit: str = "4Gi",
+    component_filter: str = "",
 ) -> str:
     """Render the in-cluster scanner Job manifest.
 
@@ -165,12 +167,16 @@ def render_job_manifest(
     """
     if cpu_limit is None:
         cpu_limit = str(min(int(parallel), 32))
+    component_filter_flag = ""
+    if component_filter.strip():
+        component_filter_flag = f"--component-filter '{component_filter}'"
     return JOB_MANIFEST.format(
         job_name=job_name,
         namespace=namespace,
         image=image,
         parallel=parallel,
         namespaces=namespaces,
+        component_filter_flag=component_filter_flag,
         pqc_flag="--pqc-check" if pqc_check else "",
         artifact_wait=artifact_wait,
         cpu_request=cpu_request,
