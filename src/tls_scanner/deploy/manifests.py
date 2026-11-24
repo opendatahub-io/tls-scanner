@@ -24,6 +24,16 @@ NETWORK_POLICY_LABEL_KEY = "tls-scanner/cleanup"
 NETWORK_POLICY_LABEL_VALUE = "dangling-policy"
 NETWORK_POLICY_SELECTOR = f"{NETWORK_POLICY_LABEL_KEY}={NETWORK_POLICY_LABEL_VALUE}"
 
+
+def _normalize_comma_list(raw: str) -> str:
+    """Collapse comma-separated CLI values to a single line for Job YAML / shell.
+
+    Validation strips each entry, but the raw string may still contain newlines
+    between commas; embedding that in the manifest breaks the container script.
+    """
+    return ",".join(part.strip() for part in raw.split(",") if part.strip())
+
+
 JOB_MANIFEST = """\
 apiVersion: batch/v1
 kind: Job
@@ -57,6 +67,7 @@ spec:
               --timing-file timing.txt \\
               --log-file /artifacts/scan.log \\
               --namespace-filter '{namespaces}' \\
+              {component_filter_flag} \\
               {pqc_flag} >> /artifacts/stdout.log 2>&1 &
             SCANNER_PID=$!
             tail -f --retry /artifacts/scan.log /artifacts/stdout.log &
@@ -155,6 +166,7 @@ def render_job_manifest(
     cpu_limit: str | None = None,
     mem_request: str = "4Gi",
     mem_limit: str = "4Gi",
+    component_filter: str = "",
 ) -> str:
     """Render the in-cluster scanner Job manifest.
 
@@ -165,12 +177,18 @@ def render_job_manifest(
     """
     if cpu_limit is None:
         cpu_limit = str(min(int(parallel), 32))
+    namespaces = _normalize_comma_list(namespaces)
+    component_filter = _normalize_comma_list(component_filter)
+    component_filter_flag = ""
+    if component_filter:
+        component_filter_flag = f"--component-filter '{component_filter}'"
     return JOB_MANIFEST.format(
         job_name=job_name,
         namespace=namespace,
         image=image,
         parallel=parallel,
         namespaces=namespaces,
+        component_filter_flag=component_filter_flag,
         pqc_flag="--pqc-check" if pqc_check else "",
         artifact_wait=artifact_wait,
         cpu_request=cpu_request,
