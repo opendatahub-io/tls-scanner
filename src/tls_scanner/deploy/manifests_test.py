@@ -7,6 +7,7 @@ import yaml
 from .manifests import (
     CLUSTER_ROLE_MANIFEST,
     DEFAULT_NAMESPACES,
+    _normalize_comma_list,
     NETWORK_POLICY_LABEL_KEY,
     NETWORK_POLICY_LABEL_VALUE,
     NETWORK_POLICY_SELECTOR,
@@ -47,6 +48,22 @@ def test_render_job_manifest_tracks_parallel_and_caps_cpu() -> None:
         artifact_wait=60,
     )
     assert "--component-filter 'maas-api,maas-controller'" in yaml.safe_load(filtered)["spec"]["template"]["spec"]["containers"][0]["args"][0]
+
+    with_newlines = render_job_manifest(
+        job_name="tls-scanner-job",
+        namespace="tls-scanner",
+        image="ghcr.io/opendatahub-io/tls-scanner@sha256:abc",
+        parallel=8,
+        namespaces="opendatahub",
+        component_filter="maas-api,\nmaas-controller",
+        pqc_check=False,
+        artifact_wait=60,
+    )
+    script = yaml.safe_load(with_newlines)["spec"]["template"]["spec"]["containers"][0]["args"][0]
+    assert "--component-filter 'maas-api,maas-controller'" in script
+    assert "\nmaas-controller" not in script
+
+    assert _normalize_comma_list(" a , b ") == "a,b"
 
     capped = yaml.safe_load(
         render_job_manifest(
